@@ -7,6 +7,7 @@ import {
 } from '@ngrx/store';
 import * as AppState from '../../state/app.state';
 import { User } from '../user';
+import * as UserActions from './user.actions';
 export interface State extends AppState.State {
   user: User;
 }
@@ -35,7 +36,7 @@ export const getCurrentUser = createSelector(
 
 export const userReducer = createReducer<UserState>(
   initialState,
-  on(createAction('[User] Toggle Mask Username'), (state) => {
+  on(UserActions.maskUserName, (state) => {
     console.log('mask username', state);
 
     return {
