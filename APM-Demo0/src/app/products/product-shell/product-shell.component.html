@@ -9,6 +9,8 @@
     </pm-product-list>
   </div>
   <div class='col-md-8'>
-    <pm-product-edit></pm-product-edit>
+    <pm-product-edit [product]="selectedProduct$ | async"
+                     (deleteProduct)="deleteProduct($event)"
+                     (saveProduct)="saveProduct($event)"></pm-product-edit>
   </div>
 </div>

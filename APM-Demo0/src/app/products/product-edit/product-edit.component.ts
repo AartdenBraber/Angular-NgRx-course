@@ -1,4 +1,12 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  Input,
+  Output,
+  EventEmitter,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 
 import { Product } from '../product';
@@ -14,23 +22,32 @@ import { Observable } from 'rxjs';
 @Component({
   selector: 'pm-product-edit',
   templateUrl: './product-edit.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProductEditComponent implements OnInit {
   pageTitle = 'Product Edit';
-  errorMessage = '';
+  @Input('errorMessage') errorMessage;
+
+  private _product: Product;
+  @Input('product') set product(newProduct: Product) {
+    this._product = newProduct;
+    this.displayProduct(newProduct);
+  }
+  get product() {
+    return this._product;
+  }
+
+  @Output() saveProduct = new EventEmitter<Product>();
+  @Output() deleteProduct = new EventEmitter<Product>();
+
   productForm: FormGroup;
 
   // Use with the generic validation message class
   displayMessage: { [key: string]: string } = {};
   private validationMessages: { [key: string]: { [key: string]: string } };
   private genericValidator: GenericValidator;
-  product$: Observable<Product>;
 
-  constructor(
-    private store: Store<State>,
-    private fb: FormBuilder,
-    private productService: ProductService
-  ) {
+  constructor(private fb: FormBuilder, private productService: ProductService) {
     // Defines all of the validation messages for the form.
     // These could instead be retrieved from a file or database.
     this.validationMessages = {
@@ -68,11 +85,6 @@ export class ProductEditComponent implements OnInit {
       description: '',
     });
 
-    // Watch for changes to the currently selected product
-    this.product$ = this.store
-      .select(getCurrentProduct)
-      .pipe(tap((currentProduct) => this.displayProduct(currentProduct)));
-
     // Watch for value changes for validation
     this.productForm.valueChanges.subscribe(
       () =>
@@ -97,7 +109,7 @@ export class ProductEditComponent implements OnInit {
     this.productForm.reset();
 
     // Display the appropriate page title
-    if (product.id === 0) {
+    if (this._product.id === 0) {
       this.pageTitle = 'Add Product';
     } else {
       this.pageTitle = `Edit Product: ${product.productName}`;
@@ -107,24 +119,17 @@ export class ProductEditComponent implements OnInit {
     this.productForm.patchValue(product);
   }
 
-  cancelEdit(product: Product): void {
+  reset(product: Product): void {
     // Redisplay the currently selected product
     // replacing any edits made
     this.displayProduct(product);
   }
 
-  deleteProduct(product: Product): void {
-    if (product && product.id) {
-      if (confirm(`Really delete the product: ${product.productName}?`)) {
-        this.store.dispatch(ProductPageActions.deleteCurrentProduct());
-      }
-    } else {
-      // No need to delete, it was never saved
-      this.store.dispatch(ProductPageActions.deleteCurrentProduct());
-    }
+  delete(product: Product) {
+    this.deleteProduct.emit(product);
   }
 
-  saveProduct(originalProduct: Product): void {
+  save(originalProduct: Product): void {
     if (!this.productForm.valid) return;
     if (!this.productForm.dirty) return;
     // Copy over all of the original product properties
@@ -132,16 +137,6 @@ export class ProductEditComponent implements OnInit {
     // This ensures values not on the form, such as the Id, are retained
     const product = { ...originalProduct, ...this.productForm.value };
 
-    if (product.id === 0) {
-      this.productService.createProduct(product).subscribe({
-        next: (p) =>
-          this.store.dispatch(
-            ProductPageActions.setCurrentProduct({ currentProductId: p.id })
-          ),
-        error: (err) => (this.errorMessage = err),
-      });
-    } else {
-      this.store.dispatch(ProductPageActions.updateProduct({ product }));
-    }
+    this.saveProduct.emit(product);
   }
 }

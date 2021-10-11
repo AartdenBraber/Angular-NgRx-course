@@ -13,16 +13,21 @@ export const initializeCurrentProduct = createAction(
 );
 
 export const deleteCurrentProduct = createAction(
-  '[Product Delete] Delete current product'
+  '[Product Page] Delete current product'
 );
 export const deleteProduct = createAction(
-  '[Product Delete] Delete product',
+  '[Product Page] Delete product',
   props<{ productId: Product['id'] }>()
 );
 
 export const loadProducts = createAction('[Product Load] Load');
 
+export const createProduct = createAction(
+  '[Product Page] Create product',
+  props<{ product: Product }>()
+);
+
 export const updateProduct = createAction(
-  '[Product Update] Update product',
+  '[Product Page] Update product',
   props<{ product: Product }>()
 );

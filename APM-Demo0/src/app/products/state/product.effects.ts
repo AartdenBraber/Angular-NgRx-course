@@ -64,6 +64,20 @@ export class ProductEffects {
     )
   );
 
+  createProduct$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ProductPageActions.createProduct),
+      concatMap((action) =>
+        this.productService.createProduct(action.product).pipe(
+          map((product) => ProductApiActions.createProductSuccess({ product })),
+          catchError((error) =>
+            of(ProductApiActions.createProductFailure({ error }))
+          )
+        )
+      )
+    )
+  );
+
   updateProduct$ = createEffect(() =>
     this.actions$.pipe(
       ofType(ProductPageActions.updateProduct),
