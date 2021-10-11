@@ -1,75 +1,104 @@
-import {
-  createFeatureSelector,
-  createReducer,
-  createSelector,
-  on,
-} from '@ngrx/store';
+import { createReducer, on } from '@ngrx/store';
 import { Product } from '../product';
 
-import * as AppState from '../../state/app.state';
-import * as ProductActions from './product.actions';
+import { ProductPageActions, ProductApiActions } from './actions';
 
-export interface State extends AppState.State {
-  products: ProductState;
-}
 export interface ProductState {
   showProductCode: boolean;
-  currentProduct: Product;
+  currentProductId?: number;
   products: Array<Product>;
+  error: string;
 }
 
 const initialState: ProductState = {
   showProductCode: true,
-  currentProduct: null,
+  currentProductId: null,
   products: [],
+  error: null,
 };
-
-const getProductFeatureState = createFeatureSelector<ProductState>('products');
-
-export const getShowProductCode = createSelector(
-  getProductFeatureState,
-  (state) => state.showProductCode
-);
-export const getCurrentProduct = createSelector(
-  getProductFeatureState,
-  (state) => state.currentProduct
-);
-export const getProducts = createSelector(
-  getProductFeatureState,
-  (state) => state.products
-);
 
 export const productReducer = createReducer<ProductState>(
   initialState,
   on(
-    ProductActions.toggleProductCode,
+    ProductPageActions.toggleProductCode,
     (state): ProductState => ({
       ...state,
       showProductCode: !state.showProductCode,
     })
   ),
   on(
-    ProductActions.setCurrentProduct,
+    ProductPageActions.setCurrentProduct,
     (state, action): ProductState => ({
       ...state,
-      currentProduct: action.product,
+      currentProductId: action.currentProductId,
     })
   ),
   on(
-    ProductActions.clearCurrentProduct,
+    ProductPageActions.initializeCurrentProduct,
     (state): ProductState => ({
       ...state,
-      currentProduct: null,
+      currentProductId: 0,
     })
   ),
-  on(ProductActions.initializeCurrentProduct, (state) => ({
-    ...state,
-    currentProduct: {
-      id: 0,
-      productName: '',
-      productCode: 'New',
-      description: '',
-      starRating: 0,
-    },
-  }))
+
+  /* Deleting product */
+  on(
+    ProductPageActions.deleteProduct,
+    (state): ProductState => ({
+      ...state,
+      currentProductId: null,
+    })
+  ),
+  on(
+    ProductApiActions.deleteProductSuccess,
+    (state, action): ProductState => ({
+      ...state,
+      products: state.products.filter((p) => p.id !== action.productId),
+      error: null,
+    })
+  ),
+  on(
+    ProductApiActions.deleteProductFailure,
+    (state, action): ProductState => ({
+      ...state,
+      error: action.error,
+    })
+  ),
+
+  /* Load products */
+  on(
+    ProductApiActions.loadProductsSuccess,
+    (state, action): ProductState => ({
+      ...state,
+      products: action.products,
+      error: null,
+    })
+  ),
+  on(
+    ProductApiActions.loadProductsFailure,
+    (state, action): ProductState => ({
+      ...state,
+      error: action.error,
+    })
+  ),
+
+  /* Update products */
+  on(
+    ProductApiActions.updateProductSuccess,
+    (state, action): ProductState => ({
+      ...state,
+      products: state.products.map((p) => {
+        if (p.id !== action.product.id) return p;
+        return action.product;
+      }),
+      error: null,
+    })
+  ),
+  on(
+    ProductApiActions.updateProductFailure,
+    (state, action): ProductState => ({
+      ...state,
+      error: action.error,
+    })
+  )
 );

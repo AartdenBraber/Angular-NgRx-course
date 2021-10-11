@@ -6,8 +6,10 @@ import { ProductService } from '../product.service';
 import { GenericValidator } from '../../shared/generic-validator';
 import { NumberValidators } from '../../shared/number.validator';
 import { Store } from '@ngrx/store';
-import { getCurrentProduct, State } from '../state/product.reducer';
-import * as ProductActions from '../state/product.actions';
+import { getCurrentProduct, State } from '../state';
+import { ProductPageActions } from '../state/actions';
+import { tap } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'pm-product-edit',
@@ -18,12 +20,11 @@ export class ProductEditComponent implements OnInit {
   errorMessage = '';
   productForm: FormGroup;
 
-  product: Product | null;
-
   // Use with the generic validation message class
   displayMessage: { [key: string]: string } = {};
   private validationMessages: { [key: string]: { [key: string]: string } };
   private genericValidator: GenericValidator;
+  product$: Observable<Product>;
 
   constructor(
     private store: Store<State>,
@@ -68,10 +69,9 @@ export class ProductEditComponent implements OnInit {
     });
 
     // Watch for changes to the currently selected product
-    // TODO: unsubscribe
-    this.store
+    this.product$ = this.store
       .select(getCurrentProduct)
-      .subscribe((currentProduct) => this.displayProduct(currentProduct));
+      .pipe(tap((currentProduct) => this.displayProduct(currentProduct)));
 
     // Watch for value changes for validation
     this.productForm.valueChanges.subscribe(
@@ -91,28 +91,20 @@ export class ProductEditComponent implements OnInit {
   }
 
   displayProduct(product: Product | null): void {
-    // Set the local product property
-    this.product = product;
+    if (!product) return;
 
-    if (product) {
-      // Reset the form back to pristine
-      this.productForm.reset();
+    // Reset the form back to pristine
+    this.productForm.reset();
 
-      // Display the appropriate page title
-      if (product.id === 0) {
-        this.pageTitle = 'Add Product';
-      } else {
-        this.pageTitle = `Edit Product: ${product.productName}`;
-      }
-
-      // Update the data on the form
-      this.productForm.patchValue({
-        productName: product.productName,
-        productCode: product.productCode,
-        starRating: product.starRating,
-        description: product.description,
-      });
+    // Display the appropriate page title
+    if (product.id === 0) {
+      this.pageTitle = 'Add Product';
+    } else {
+      this.pageTitle = `Edit Product: ${product.productName}`;
     }
+
+    // Update the data on the form
+    this.productForm.patchValue(product);
   }
 
   cancelEdit(product: Product): void {
@@ -124,43 +116,32 @@ export class ProductEditComponent implements OnInit {
   deleteProduct(product: Product): void {
     if (product && product.id) {
       if (confirm(`Really delete the product: ${product.productName}?`)) {
-        this.productService.deleteProduct(product.id).subscribe({
-          next: () => this.store.dispatch(ProductActions.clearCurrentProduct()),
-          error: (err) => (this.errorMessage = err),
-        });
+        this.store.dispatch(ProductPageActions.deleteCurrentProduct());
       }
     } else {
       // No need to delete, it was never saved
-      this.store.dispatch(ProductActions.clearCurrentProduct());
+      this.store.dispatch(ProductPageActions.deleteCurrentProduct());
     }
   }
 
   saveProduct(originalProduct: Product): void {
-    if (this.productForm.valid) {
-      if (this.productForm.dirty) {
-        // Copy over all of the original product properties
-        // Then copy over the values from the form
-        // This ensures values not on the form, such as the Id, are retained
-        const product = { ...originalProduct, ...this.productForm.value };
+    if (!this.productForm.valid) return;
+    if (!this.productForm.dirty) return;
+    // Copy over all of the original product properties
+    // Then copy over the values from the form
+    // This ensures values not on the form, such as the Id, are retained
+    const product = { ...originalProduct, ...this.productForm.value };
 
-        if (product.id === 0) {
-          this.productService.createProduct(product).subscribe({
-            next: (p) =>
-              this.store.dispatch(
-                ProductActions.setCurrentProduct({ product: p })
-              ),
-            error: (err) => (this.errorMessage = err),
-          });
-        } else {
-          this.productService.updateProduct(product).subscribe({
-            next: (p) =>
-              this.store.dispatch(
-                ProductActions.setCurrentProduct({ product: p })
-              ),
-            error: (err) => (this.errorMessage = err),
-          });
-        }
-      }
+    if (product.id === 0) {
+      this.productService.createProduct(product).subscribe({
+        next: (p) =>
+          this.store.dispatch(
+            ProductPageActions.setCurrentProduct({ currentProductId: p.id })
+          ),
+        error: (err) => (this.errorMessage = err),
+      });
+    } else {
+      this.store.dispatch(ProductPageActions.updateProduct({ product }));
     }
   }
 }
