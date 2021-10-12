@@ -35,7 +35,7 @@ export class ProductShellComponent implements OnInit {
     this.displayCode$ = this.store.select(getShowProductCode);
   }
 
-  checkChanged(): void {
+  toggleProductCode(): void {
     this.store.dispatch(ProductPageActions.toggleProductCode());
   }
 

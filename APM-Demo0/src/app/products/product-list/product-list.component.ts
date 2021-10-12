@@ -23,15 +23,14 @@ export class ProductListComponent {
   @Input('displayCode') displayCode: boolean;
   @Input('selectedProduct') selectedProduct: Product;
 
-  @Output('displayCodeChanged') displayCodeChanged =
-    new EventEmitter<boolean>();
+  @Output('toggleDisplayCode') toggleDisplayCode = new EventEmitter<boolean>();
   @Output('initializeNewProduct') initializeNewProduct =
     new EventEmitter<void>();
   @Output('productWasSelected') productWasSelected =
     new EventEmitter<Product>();
 
-  checkChanged() {
-    this.displayCodeChanged.emit();
+  toggleCode() {
+    this.toggleDisplayCode.emit();
   }
 
   newProduct() {
